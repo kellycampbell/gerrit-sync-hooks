@@ -1,0 +1,52 @@
+#!/bin/bash 
+
+# This script implements a gerrit hook to post to slack
+
+set -e # exit on any error return val
+
+
+# --project <project name> --refname <refname> --uploader <uploader> --oldrev <sha1> --newrev <sha1>
+
+while [[ $# > 1 ]] ; do
+  case "$1" in
+    --change)
+        change=$2 ; shift ;;
+    --change-url)
+        change_url=$2 ; shift ;;
+    --change-owner)
+        change_owner=$2 ; shift ;;
+    --project)
+        project=$2 ; shift ;;
+    --branch)
+        branch=$2 ; shift ;;
+    --submitter)
+        submitter=$2 ; shift ;;
+    --commit)
+        commit=$2 ; shift ;;
+    --refname)
+        refname=$2 ; shift ;;
+    --uploader)
+        uploader=$2 ; shift ;;
+    --oldrev)
+        oldrev=$2 ; shift ;;
+    --newrev)
+        newrev=$2 ; shift ;;
+    --isdraft)
+        isdraft=$2 ; shift ;;
+    --topic)
+        topic=$2 ; shift ;;
+    --patchset)
+        patchset=$2 ; shift ;;
+  esac
+  shift
+done
+
+text="Patchset ${patchset} added to *${project}* *${branch}* by ${uploader}:\n${topic}\n<${change_url}|${change_url}:${patchset}>"
+
+payload='payload={"channel": "#gerrit", "username": "gerrit", "text": '
+payload+=\"$text\"
+payload+=', "icon_url": "https://gerrit.foo.com/favicon.ico"}'
+
+#echo $payload
+
+curl -X POST --data-urlencode "${payload}" https://yourteam.slack.com/services/hooks/incoming-webhook?token=<yourtoken>

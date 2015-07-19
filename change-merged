@@ -1,0 +1,64 @@
+#!/bin/bash 
+
+# This script implements a gerrit hook to handle changes being merged into projects
+# which need to sync over to a github project.
+#
+# When the commit is merged to a branch which is listed as one we sync, we will sync up with
+# the github branch using git fetch && git rebase -p then push it to github.
+
+set -e # exit on any error return val
+
+# --change Ia6b818ea822ed6d7336c5b1c45e8d724ecb070b7 --change-url http://localhost:9090/8
+# --change-owner Kelly Campbell (kelly@foo.com) --project test_gerrit_sync --branch master
+# --submitter Kelly Campbell (kelly@foo.com) --commit cf3c79c7b541fec20630d7ff9273b76aa51ed196
+
+while [[ $# > 1 ]] ; do
+  case "$1" in
+    --change)
+        change=$2 ; shift ;;
+    --change-url)
+        change_url=$2 ; shift ;;
+    --change-owner)
+        change_owner=$2 ; shift ;;
+    --project)
+        project=$2 ; shift ;;
+    --branch)
+        branch=$2 ; shift ;;
+    --submitter)
+        submitter=$2 ; shift ;;
+    --commit)
+        commit=$2 ; shift ;;
+  esac
+  shift
+done
+
+# PROJECT="gerrit-project-name"
+# BRANCH="master"
+WORKDIR=/tmp/${USER}_${project}_${branch}_${BASHPID}
+
+# if [ "$project" = "$PROJECT" -a "$branch" = "$BRANCH" ] ; then
+mkdir -p "$WORKDIR"
+git --git-dir=. --work-tree=$WORKDIR checkout -f $branch
+
+git fetch origin ${branch}
+
+# Rebase incase any commits got into the origin outside of gerrit
+# execute in a subshell to keep -e from causing an exit
+# TODO(kellyc): this is where commits tend to get stuck with status
+#   being submitted in gerrit, and nothing in origin
+(
+  git --git-dir=. --work-tree=$WORKDIR rebase -p FETCH_HEAD
+  rebaseStatus=$?
+  if (( $rebaseStatus != 0 )) ; then
+    git --git-dir=. --work-tree=$WORKDIR rebase --abort
+    exit $rebaseStatus
+  fi
+)
+git --git-dir=. --work-tree=$WORKDIR push origin ${branch}
+git fetch origin ${branch}
+git update-ref HEAD FETCH_HEAD
+
+rm -rf $WORKDIR
+
+# fi
+# 
