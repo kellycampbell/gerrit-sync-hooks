@@ -32,6 +32,16 @@ while [[ $# > 1 ]] ; do
   shift
 done
 
+set +e
+grep "$project" /home/gerrit/gerrit/etc/non_gitlab_repos.txt
+exclude_proj=$?
+set -e
+
+if [[ $exclude_proj == 0 ]] ; then
+  exit
+fi
+
+
 # PROJECT="gerrit-project-name"
 # BRANCH="master"
 WORKDIR=/tmp/${USER}_${project}_${branch}_${BASHPID}

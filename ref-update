@@ -40,7 +40,14 @@ done
 
 branch=$(echo "$refname" | sed "s-refs/for/--")
 
-echo "Ensuring gerrit in sync with github on branch $branch."
-git fetch origin $branch
-git update-ref refs/heads/$branch FETCH_HEAD
+set +e
+grep "$project" /home/gerrit/gerrit/etc/non_gitlab_repos.txt
+exclude_proj=$?
+set -e
+
+if [[ $exclude_proj != 0 ]] ; then
+    echo "Ensuring gerrit in sync with github on branch $branch."
+    git fetch origin $branch
+    git update-ref refs/heads/$branch FETCH_HEAD
+fi
 
